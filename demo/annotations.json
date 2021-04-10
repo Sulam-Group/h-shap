@@ -1,0 +1,110 @@
+[
+    {
+        "image": "1f8f08ea-b5b3-4f68-94d4-3cc071b7dce8.png",
+        "objects": [
+            {
+                "bounding_box": {
+                    "minimum": {
+                        "r": 700,
+                        "c": 151
+                    },
+                    "maximum": {
+                        "r": 782,
+                        "c": 242
+                    }
+                },
+                "category": "trophozoite"
+            }
+        ]
+    },
+    {
+        "image": "2ac343e4-c889-47c1-8fe2-461b626def76.png",
+        "objects": [
+            {
+                "bounding_box": {
+                    "minimum": {
+                        "r": 523,
+                        "c": 766
+                    },
+                    "maximum": {
+                        "r": 658,
+                        "c": 930
+                    }
+                },
+                "category": "trophozoite"
+            }
+        ]
+    },
+    {
+        "image": "2bd15b6e-fe2d-49f3-b394-940d024d1f91.png",
+        "objects": [
+            {
+                "bounding_box": {
+                    "minimum": {
+                        "r": 352,
+                        "c": 1119
+                    },
+                    "maximum": {
+                        "r": 495,
+                        "c": 1256
+                    }
+                },
+                "category": "trophozoite"
+            }
+        ]
+    },
+    {
+        "image": "38d1b930-dd97-4248-9160-e9389a1a8dd7.png",
+        "objects": [
+            {
+                "bounding_box": {
+                    "minimum": {
+                        "r": 469,
+                        "c": 756
+                    },
+                    "maximum": {
+                        "r": 631,
+                        "c": 910
+                    }
+                },
+                "category": "trophozoite"
+            }
+        ]
+    },
+    {
+        "image": "471f75c6-bd5d-4c20-bcc1-258e836f4d69.png",
+        "objects": [
+            {
+                "bounding_box": {
+                    "minimum": {
+                        "r": 888,
+                        "c": 344
+                    },
+                    "maximum": {
+                        "r": 1033,
+                        "c": 483
+                    }
+                },
+                "category": "trophozoite"
+            }
+        ]
+    },
+    {
+        "image": "32700bc7-7a86-49d3-aded-ccaaed4ddc5c.png",
+        "objects": [
+            {
+                "bounding_box": {
+                    "minimum": {
+                        "r": 151,
+                        "c": 126
+                    },
+                    "maximum": {
+                        "r": 296,
+                        "c": 249
+                    }
+                },
+                "category": "trophozoite"
+            }
+        ]
+    }
+]

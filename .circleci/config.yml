@@ -1,0 +1,33 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.3.0
+
+workflows:
+  test-and-build:
+    jobs:
+      - test-and-build
+
+jobs:
+  test-and-build:
+    docker:
+      - image: cimg/python:3.8
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+      - run:
+          name: Install dependencies
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install pytest pytest-cov codecov black
+            pip install -r requirements.txt
+            pip install -e .
+      - run:
+          name: Test
+          command: |
+            . venv/bin/activate
+            pytest --cov=hshap
+            black --check --diff ./hshap
+            codecov
