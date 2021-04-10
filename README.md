@@ -12,8 +12,8 @@ h-Shap provides a fast, hierarchical implementation of Shapley coefficients for 
 h-Shap is implemented in Python and it can be installed by cloning this repository.
 
 ```python
-git clone hshap
-cd hshap
+git clone https://github.com/Sulam-Group/h-shap.git
+cd h-shap
 pip install -e .
 ```
 
