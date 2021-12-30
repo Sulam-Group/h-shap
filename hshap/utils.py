@@ -130,7 +130,7 @@ DEFAULT_FEATURES = hshap_features(DEFAULT_M)
 
 
 def shapley_phi(
-    logits_dictionary: dict, feature: np.ndarray, masks: np.ndarray = DEFAULT_MASKS
+    logits_dictionary: dict, feature: np.ndarray, masks: np.ndarray
 ) -> float:
     """
     Compute Shapley coefficient of a feature

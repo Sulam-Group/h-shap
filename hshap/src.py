@@ -110,10 +110,8 @@ class Explainer:
                         ],
                         0,
                     )
-                    # print(batch_input.size())
                     batch_outputs = self.model(batch_input, **kwargs)
                     batch_outputs = batch_outputs.cpu()
-                    # print(batch_outputs.size())
                     batch_outputs = batch_outputs.view(
                         (l, 2 ** self.gamma, batch_outputs.size(1))
                     )
