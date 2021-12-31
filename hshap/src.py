@@ -92,12 +92,9 @@ class Explainer:
         """
         Explain image
         """
-        # Define auxilliary variables
         batch_size = 32
-        # Initialize root node
         root_node = Node(path=torch.ones((1, self.gamma)).long(), score=1.0)
         leafs = []
-        # Define the first level
         level = [root_node]
         L = len(level)
         while L > 0:

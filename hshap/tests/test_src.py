@@ -8,7 +8,9 @@ import numpy as np
 
 def test_node():
     path = torch.tensor([[1, 1, 1, 1]]).long()
-    masks = torch.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]).long()
+    masks = torch.tensor(
+        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+    ).long()
 
     node = Node(path)
 
