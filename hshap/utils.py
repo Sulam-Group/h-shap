@@ -98,10 +98,11 @@ def mask2d(
                 feature_coords[0][1] : feature_coords[1][1],
             ] = 1
         # roll the feature mask if desired
-        column_offset = int(r * np.cos(alpha))
-        row_offset = -int(r * np.sin(alpha))
-        feature_mask = torch.roll(feature_mask, row_offset, dims=1)
-        feature_mask = torch.roll(feature_mask, column_offset, dims=2)
+        if r != 0 or alpha != 0:
+            column_offset = int(r * np.cos(alpha))
+            row_offset = -int(r * np.sin(alpha))
+            feature_mask = torch.roll(feature_mask, row_offset, dims=1)
+            feature_mask = torch.roll(feature_mask, column_offset, dims=2)
         _x = feature_mask * x + (1 - feature_mask) * _x
         return _x
 
@@ -162,7 +163,6 @@ def children_scores(
     logits_dictionary = {
         mask2str(mask): label_logits[i] for i, mask in enumerate(masks)
     }
-    return np.array(
+    return torch.tensor(
         [shapley_phi(logits_dictionary, feature, masks) for feature in features],
-        dtype=object,
     )

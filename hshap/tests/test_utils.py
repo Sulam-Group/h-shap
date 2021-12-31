@@ -78,7 +78,6 @@ def test_mask_single_level():
 
     path = np.array([[1, 0, 0, 0]])
     masked_x = mask2d(path, x, background.clone())
-    print(masked_x)
     masked_ref = torch.tensor(
         [[[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
     )
@@ -174,12 +173,12 @@ def test_child_scores():
     features = hshap_features(2)
     masks = np.array([[0, 0], [1, 1], [1, 0], [0, 1]])
 
-    label_logits = torch.Tensor([[0], [1], [1], [0]])
+    label_logits = torch.tensor([[0], [1], [1], [0]])
 
     children = children_scores(label_logits, masks=masks, features=features)
-    assert (children == [1, 0]).all()
+    assert torch.equal(children, torch.tensor([1, 0]).float())
 
-    label_logits = torch.Tensor([[0], [1], [1], [1]])
+    label_logits = torch.tensor([[0], [1], [1], [1]])
 
     children = children_scores(label_logits, masks=masks, features=features)
-    assert (children == [0.5, 0.5]).all()
+    assert torch.equal(children, torch.tensor([0.5, 0.5]).float())

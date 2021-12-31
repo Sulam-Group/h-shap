@@ -28,7 +28,7 @@ class Node:
         Mask input with all the masks required to compute Shapley values
         """
         d = len(x.shape)
-        q = list(np.ones(d + 1, dtype=np.integer))
+        q = list(np.ones(d + 1, dtype=np.int32))
         q[0] = len(masks)
 
         masked_inputs = background.repeat(q)
@@ -82,16 +82,17 @@ class Explainer:
         label: int,
         threshold_mode: str = "absolute",
         threshold: float = 0.0,
-        softmax_activation: bool = True,
         r: float = 0.0,
         alpha: float = 0.0,
+        softmax_activation: bool = True,
+        binary_map: bool = False,
         **kwargs
     ) -> np.ndarray:
         """
         Explain image
         """
         # Define auxilliary variables
-        batch_size = 16
+        batch_size = 32
         # Initialize root node
         root_node = Node(np.array([[1 for _ in range(self.gamma)]]))
         leafs = []
@@ -99,7 +100,7 @@ class Explainer:
         level = [root_node]
         L = len(level)
         while L > 0:
-            layer_scores = np.zeros((L, self.gamma))
+            layer_scores = torch.empty((L, self.gamma))
             for batch_id, batch in enumerate_batches(level, batch_size):
                 l = len(batch)
                 with torch.no_grad():
@@ -111,17 +112,17 @@ class Explainer:
                         0,
                     )
                     batch_outputs = self.model(batch_input, **kwargs)
-                    batch_outputs = batch_outputs.cpu()
-                    batch_outputs = batch_outputs.view(
-                        (l, 2 ** self.gamma, batch_outputs.size(1))
-                    )
+                    if softmax_activation:
+                        batch_outputs = torch.nn.functional.softmax(
+                            batch_outputs, dim=1
+                        )
+                    label_outputs = batch_outputs[:, label]
+                    label_outputs = label_outputs.view((l, 2 ** self.gamma))
+                    label_outputs = label_outputs.cpu()
                     for i, _ in enumerate(batch):
-                        node_logits = batch_outputs[i]
-                        if softmax_activation:
-                            node_logits = torch.nn.Softmax(dim=1)(node_logits)
-                        label_logits = node_logits[:, label]
+                        node_logits = label_outputs[i]
                         layer_scores[batch_id * batch_size + i] = children_scores(
-                            label_logits
+                            node_logits
                         )
                     torch.cuda.empty_cache()
 
@@ -166,10 +167,11 @@ class Explainer:
         saliency_map = torch.zeros(1, self.size[0], self.size[1])
         for leaf in leafs:
             saliency_map += mask2d(
-                leaf.path,
-                torch.ones(1, self.size[0], self.size[1]) * leaf.score,
-                torch.zeros(1, self.size[0], self.size[1]),
-                r,
-                alpha,
+                path=leaf.path,
+                x=torch.ones(1, self.size[0], self.size[1])
+                * (1 if binary_map else leaf.score),
+                _x=torch.zeros(1, self.size[0], self.size[1]),
+                r=r,
+                alpha=alpha,
             )
         return saliency_map[0].numpy(), leafs
