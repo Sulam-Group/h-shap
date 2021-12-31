@@ -2,7 +2,6 @@
 .ipynb_checkpoints
 .coverage
 data
-experiments/
 **/__pycache__/
 .pytest_cache/
 venv/

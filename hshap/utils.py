@@ -1,11 +1,9 @@
 from typing import Generator, Iterable, Tuple
 import torch
+import numpy as np
 from torch import Tensor
 from itertools import permutations
-import numpy as np
 from functools import reduce
-
-from torch._C import Value
 
 factorial = np.math.factorial
 
@@ -25,30 +23,91 @@ def enumerate_batches(
             yield i, collection[first_el:]
 
 
-def hshap_features(M: int) -> np.ndarray:
+def hshap_features(gamma: int) -> Tensor:
     """
-    Make the required M features
+    Make the required features
     """
-    return np.identity(M, dtype=int).reshape((M, M))
+    return torch.eye(gamma).long()
 
 
-def make_masks(M: int) -> np.ndarray:
+def make_masks(gamma: int) -> Tensor:
     """
-    Make all required masks to compute Shapley values given the number of features M
+    Make all required masks to compute Shapley values given the number of features gamma
+    and order them by their rank, where the rank is the integer obtain by concatenating
+    the indices of the nonzero elments in the mask
     """
-    masks = np.ones((1, M), dtype=bool)
-    for i in range(M):
-        s = np.zeros(M, dtype=bool)
-        s[0:i] = 1
-        p = permutations(s)
-        a = np.array(list(set(p)))
-        masks = np.concatenate((masks, a))
+    masks = []
+    for i in range(1, gamma + 1):
+        masks.extend(list(set(permutations((gamma - i) * [0] + i * [1]))))
+    masks = torch.tensor(masks).long()
+    rank = torch.tensor(
+        [int("".join(map(str, (m.nonzero() + 1).squeeze(1).tolist()))) for m in masks]
+    )
+    masks = masks[rank.argsort()]
+    masks = torch.cat((torch.zeros((1, gamma)).long(), masks))
     return masks
 
 
+def w(c: int, gamma: int) -> int:
+    """
+    Compute the weight of a subset of features of cardinality c
+    """
+    return factorial(c) * factorial(gamma - c - 1) / factorial(gamma)
+
+
+def shapley_matrix(gamma: int) -> Tensor:
+    """
+    Compose the matrix to compute the Shapley values.
+    This function assumes that masks are ordered as per `make_masks`
+    definition of rank
+    """
+    if gamma != 4:
+        raise NotImplementedError
+    # construct matrix as copies of first row
+    W = torch.tensor(
+        [
+            [-w(0, gamma), w(0, gamma)]
+            + 3 * [-w(1, gamma)]
+            + 3 * [w(1, gamma)]
+            + 3 * [-w(2, gamma)]
+            + 3 * [w(2, gamma)]
+            + [-w(3, gamma), w(3, gamma)]
+        ]
+    ).repeat(gamma, 1)
+    # update second row
+    W[1, 1] = -w(1, gamma)
+    W[1, 2] = w(0, gamma)
+    W[1, 6] = -w(2, gamma)
+    W[1, 7] = -w(2, gamma)
+    W[1, 8] = w(1, gamma)
+    W[1, 9] = w(1, gamma)
+    W[1, -3] = -w(3, gamma)
+    W[1, -2] = w(2, gamma)
+    # update second row
+    W[2, 1] = -w(1, gamma)
+    W[2, 3] = w(0, gamma)
+    W[2, 5] = -w(2, gamma)
+    W[2, 7] = -w(2, gamma)
+    W[2, 8] = w(1, gamma)
+    W[2, 10] = w(1, gamma)
+    W[2, -4] = -w(3, gamma)
+    W[2, -2] = w(2, gamma)
+    # update third row
+    W[3, 1] = -w(1, gamma)
+    W[3, 4] = w(0, gamma)
+    W[3, 5] = -w(2, gamma)
+    W[3, 6] = -w(2, gamma)
+    W[3, 9] = w(1, gamma)
+    W[3, 10] = w(1, gamma)
+    W[3, -5] = -w(3, gamma)
+    W[3, -2] = w(2, gamma)
+
+    return W.transpose(0, 1)
+
+
 def mask2d(
-    path: np.ndarray, x: Tensor, _x: Tensor, r: float = 0, alpha: float = 0
-) -> torch.Tensor:
+    path: Tensor, x: Tensor, _x: Tensor, r: float = 0, alpha: float = 0
+) -> Tensor:
     """
     Creates a masked copy of x based on node.path and the specified background
     """
@@ -56,28 +115,28 @@ def mask2d(
     if len(path) == 0:
         return x
 
-    if sum(path[-1]) == 0:
+    if path[-1].sum() == 0:
         return _x
     else:
         coords = np.array([[0, 0], [_x.size(1), _x.size(2)]], dtype=int)
         for level in path[:-1]:
-            if sum(level) == 1:
+            if level.sum() == 1:
                 center = (
                     (coords[0][0] + coords[1][0]) / 2,
                     (coords[0][1] + coords[1][1]) / 2,
                 )
-                feature_id = np.where(level == 1)[0]
-                (feature_row, feature_column) = (int(feature_id / 2), feature_id % 2)
+                feature_id = level.nonzero().squeeze()
+                (feature_row, feature_column) = (feature_id // 2, feature_id % 2)
                 coords[0][0] = center[0] if feature_row == 1 else coords[0][0]
                 coords[0][1] = center[1] if feature_column == 1 else coords[0][1]
                 coords[1][0] = center[0] if (1 - feature_row) == 1 else coords[1][0]
                 coords[1][1] = center[1] if (1 - feature_column) == 1 else coords[1][1]
         level = path[-1]
         center = ((coords[0][0] + coords[1][0]) / 2, (coords[0][1] + coords[1][1]) / 2)
-        feature_ids = np.where(level == 1)[0]
+        feature_ids = level.nonzero().squeeze(1)
         feature_mask = torch.zeros_like(x)
         for feature_id in feature_ids:
-            (feature_row, feature_column) = (int(feature_id / 2), feature_id % 2)
+            (feature_row, feature_column) = (feature_id // 2, feature_id % 2)
             feature_coords = coords.copy()
             feature_coords[0][0] = (
                 center[0] if feature_row == 1 else feature_coords[0][0]
@@ -105,64 +164,3 @@ def mask2d(
             feature_mask = torch.roll(feature_mask, column_offset, dims=2)
         _x = feature_mask * x + (1 - feature_mask) * _x
         return _x
-
-
-def mask2str(mask: np.ndarray) -> str:
-    """
-    Convert a mask from array to string
-    """
-    return reduce(lambda a, b: str(a) + str(b), mask.astype(int))
-
-
-def str2mask(string: str) -> np.ndarray:
-    """
-    Convert a string into mask
-    """
-    L = len(string)
-    mask = np.empty((L,))
-    for i in range(L):
-        mask[i] = int(string[i])
-    return mask
-
-
-DEFAULT_M = 4
-DEFAULT_MASKS = make_masks(DEFAULT_M)
-DEFAULT_FEATURES = hshap_features(DEFAULT_M)
-
-
-def shapley_phi(
-    logits_dictionary: dict, feature: np.ndarray, masks: np.ndarray
-) -> float:
-    """
-    Compute Shapley coefficient of a feature
-    """
-    d = len(feature)
-    feature_id = np.where(feature == 1)
-    _set_id = np.where(masks[:, feature_id[0][0]] == 0)
-    _set = masks[_set_id]
-    phi = 0
-    for s in _set:
-        sUi = s + feature
-        phi += (
-            factorial(sum(s))
-            * factorial(d - sum(s) - 1)
-            / factorial(d)
-            * (logits_dictionary[mask2str(sUi)] - logits_dictionary[mask2str(s)])
-        )
-    return phi
-
-
-def children_scores(
-    label_logits: Tensor,
-    masks: np.ndarray = DEFAULT_MASKS,
-    features: np.ndarray = DEFAULT_FEATURES,
-) -> np.ndarray:
-    """
-    Compute Shapley coefficients of children features
-    """
-    logits_dictionary = {
-        mask2str(mask): label_logits[i] for i, mask in enumerate(masks)
-    }
-    return torch.tensor(
-        [shapley_phi(logits_dictionary, feature, masks) for feature in features],
-    )

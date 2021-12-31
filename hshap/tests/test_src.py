@@ -1,26 +1,29 @@
 from typing import Callable
 from hshap.src import Node, Explainer
-from hshap.utils import make_masks, hshap_features
+from hshap.utils import make_masks, hshap_features, shapley_matrix
 import torch
 from torch import Tensor
 import numpy as np
 
 
 def test_node():
-    path = np.array([[1, 1, 1, 1]])
-    masks = np.array([[1, 0, 0, 0]])
+    path = torch.tensor([[1, 1, 1, 1]]).long()
+    masks = torch.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]).long()
 
     node = Node(path)
 
-    assert np.array_equal(node.path, path) and node.score == 1
+    assert torch.equal(node.path, path) and node.score == 1.0
 
     x = torch.ones(3, 4, 4)
     background = torch.zeros(3, 4, 4)
 
     masked_x = node.masked_inputs(masks, x, background)
-    masked_ref = torch.zeros(x.size())
-    masked_ref[:, :2, :2] = 1
-    assert torch.all(masked_x.eq(masked_ref))
+    masked_ref = torch.zeros_like(x).unsqueeze(0).repeat(len(masks), 1, 1, 1)
+    masked_ref[0, :, :2, :2] = 1
+    masked_ref[1, :, :2, 2:] = 1
+    masked_ref[2, :, 2:, :2] = 1
+    masked_ref[3, :, 2:, 2:] = 1
+    assert torch.equal(masked_x, masked_ref)
 
 
 def test_explainer():
@@ -34,22 +37,21 @@ def test_explainer():
 
     background = torch.zeros(3, 64, 64)
     min_size = 2
-    M = 4
 
     hexp = Explainer(
         model=f,
         background=background,
         min_size=min_size,
-        gamma=M,
     )
     assert (
         hexp.model == f
         and torch.all(hexp.background.eq(background))
         and hexp.size == (64, 64)
         and hexp.stop_l == 7  # log(64/2) // log(2) + 2 = 5 + 2 = 7
-        and hexp.gamma == M
-        and np.array_equal(hexp.masks, make_masks(M))
-        and np.array_equal(hexp.features, hshap_features(M))
+        and hexp.gamma == 4
+        and torch.equal(hexp.masks, make_masks(4))
+        and torch.equal(hexp.features, hshap_features(4))
+        and torch.equal(hexp.W, shapley_matrix(4))
     )
 
     explanation_positive_ref = np.zeros((64, 64))
