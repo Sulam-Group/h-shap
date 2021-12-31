@@ -4,7 +4,8 @@ from torch import Tensor
 from itertools import permutations
 import numpy as np
 from functools import reduce
-import time
+
+from torch._C import Value
 
 factorial = np.math.factorial
 
@@ -45,7 +46,9 @@ def make_masks(M: int) -> np.ndarray:
     return masks
 
 
-def mask(path: np.ndarray, x: Tensor, _x: Tensor) -> torch.Tensor:
+def mask2d(
+    path: np.ndarray, x: Tensor, _x: Tensor, r: float = 0, alpha: float = 0
+) -> torch.Tensor:
     """
     Creates a masked copy of x based on node.path and the specified background
     """
@@ -55,7 +58,6 @@ def mask(path: np.ndarray, x: Tensor, _x: Tensor) -> torch.Tensor:
 
     if sum(path[-1]) == 0:
         return _x
-
     else:
         coords = np.array([[0, 0], [_x.size(1), _x.size(2)]], dtype=int)
         for level in path[:-1]:
@@ -73,6 +75,7 @@ def mask(path: np.ndarray, x: Tensor, _x: Tensor) -> torch.Tensor:
         level = path[-1]
         center = ((coords[0][0] + coords[1][0]) / 2, (coords[0][1] + coords[1][1]) / 2)
         feature_ids = np.where(level == 1)[0]
+        feature_mask = torch.zeros_like(x)
         for feature_id in feature_ids:
             (feature_row, feature_column) = (int(feature_id / 2), feature_id % 2)
             feature_coords = coords.copy()
@@ -88,15 +91,19 @@ def mask(path: np.ndarray, x: Tensor, _x: Tensor) -> torch.Tensor:
             feature_coords[1][1] = (
                 center[1] if (1 - feature_column) == 1 else feature_coords[1][1]
             )
-            _x[
+            # feature_mask
+            feature_mask[
                 :,
                 feature_coords[0][0] : feature_coords[1][0],
                 feature_coords[0][1] : feature_coords[1][1],
-            ] = x[
-                :,
-                feature_coords[0][0] : feature_coords[1][0],
-                feature_coords[0][1] : feature_coords[1][1],
-            ]
+            ] = 1
+        # roll the feature mask if desired
+        if r != 0 or alpha != 0:
+            column_offset = int(r * np.cos(alpha))
+            row_offset = -int(r * np.sin(alpha))
+            feature_mask = torch.roll(feature_mask, row_offset, dims=1)
+            feature_mask = torch.roll(feature_mask, column_offset, dims=2)
+        _x = feature_mask * x + (1 - feature_mask) * _x
         return _x
 
 
@@ -124,7 +131,7 @@ DEFAULT_FEATURES = hshap_features(DEFAULT_M)
 
 
 def shapley_phi(
-    logits_dictionary: dict, feature: np.ndarray, masks: np.ndarray = DEFAULT_MASKS
+    logits_dictionary: dict, feature: np.ndarray, masks: np.ndarray
 ) -> float:
     """
     Compute Shapley coefficient of a feature
@@ -156,7 +163,6 @@ def children_scores(
     logits_dictionary = {
         mask2str(mask): label_logits[i] for i, mask in enumerate(masks)
     }
-    return np.array(
+    return torch.tensor(
         [shapley_phi(logits_dictionary, feature, masks) for feature in features],
-        dtype=object,
     )

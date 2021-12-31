@@ -36,22 +36,29 @@ def test_explainer():
     min_size = 2
     M = 4
 
-    hexp = Explainer(f, background, min_size, M)
+    hexp = Explainer(
+        model=f,
+        background=background,
+        min_size=min_size,
+        gamma=M,
+    )
     assert (
         hexp.model == f
         and torch.all(hexp.background.eq(background))
         and hexp.size == (64, 64)
-        and hexp.stop_l == 6
-        and hexp.M == M
-        and np.array_equal(hexp.masks, make_masks(4))
-        and np.array_equal(hexp.features, hshap_features(4))
+        and hexp.stop_l == 7  # log(64/2) // log(2) + 2 = 5 + 2 = 7
+        and hexp.gamma == M
+        and np.array_equal(hexp.masks, make_masks(M))
+        and np.array_equal(hexp.features, hshap_features(M))
     )
 
     explanation_positive_ref = np.zeros((64, 64))
     explanation_positive_ref[:2, :2] = 1
+    (explanation_positive, _) = hexp.explain(
+        x[0], 1, threshold_mode="absolute", binary_map=True
+    )
+    assert np.array_equal(explanation_positive, explanation_positive_ref)
+
     explanation_negative_ref = np.zeros((64, 64))
-    (explanation_positive, _) = hexp.explain(x[0], 1, threshold_mode="absolute")
     (explanation_negative, _) = hexp.explain(x[1], 1, threshold_mode="absolute")
-    assert np.array_equal(
-        explanation_positive, explanation_positive_ref
-    ) and np.array_equal(explanation_negative, explanation_negative_ref)
+    assert np.array_equal(explanation_negative, explanation_negative_ref)

@@ -2,7 +2,7 @@ from hshap.utils import (
     enumerate_batches,
     hshap_features,
     make_masks,
-    mask,
+    mask2d,
     mask2str,
     str2mask,
     shapley_phi,
@@ -61,45 +61,44 @@ def test_mask_single_level():
     background = torch.zeros(1, 4, 4)
 
     path = np.array([])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     assert torch.all(masked_x.eq(x))
 
     path = np.array([[0, 0, 0, 0]])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     assert torch.all(masked_x.eq(background))
 
     path = np.array([[1, 1, 1, 1]])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     assert torch.all(masked_x.eq(x))
 
     path = np.array([[1, 1, 1, 1], [0, 0, 0, 0]])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     assert torch.all(masked_x.eq(background))
 
     path = np.array([[1, 0, 0, 0]])
-    masked_x = mask(path, x, background.clone())
-    print(masked_x)
+    masked_x = mask2d(path, x, background.clone())
     masked_ref = torch.tensor(
         [[[1, 1, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
     )
     assert torch.all(masked_x.eq(masked_ref))
 
     path = np.array([[0, 1, 0, 0]])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     masked_ref = torch.tensor(
         [[[0, 0, 1, 1], [0, 0, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]]]
     )
     assert torch.all(masked_x.eq(masked_ref))
 
     path = np.array([[0, 0, 1, 0]])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     masked_ref = torch.tensor(
         [[[0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 0, 0], [1, 1, 0, 0]]]
     )
     assert torch.all(masked_x.eq(masked_ref))
 
     path = np.array([[0, 0, 0, 1]])
-    masked_x = mask(path, x, background.clone())
+    masked_x = mask2d(path, x, background.clone())
     masked_ref = torch.tensor(
         [[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 1], [0, 0, 1, 1]]]
     )
@@ -111,18 +110,18 @@ def test_mask_multiple_levels():
     background = torch.zeros(1, 4, 4)
 
     path = np.array([[1, 0, 0, 0], [0, 0, 0, 0]])
-    masked_x = mask(path, x, background)
+    masked_x = mask2d(path, x, background)
     assert torch.all(masked_x.eq(background))
 
     path = np.array([[1, 0, 0, 0], [1, 0, 0, 0]])
-    masked_x = mask(path, x, background)
+    masked_x = mask2d(path, x, background)
     masked_ref = torch.tensor(
         [[[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
     )
     assert torch.all(masked_x.eq(masked_ref))
 
     path = np.array([[1, 0, 0, 0], [1, 0, 0, 1]])
-    masked_x = mask(path, x, background)
+    masked_x = mask2d(path, x, background)
     masked_ref = torch.tensor(
         [[[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]]
     )
@@ -174,12 +173,12 @@ def test_child_scores():
     features = hshap_features(2)
     masks = np.array([[0, 0], [1, 1], [1, 0], [0, 1]])
 
-    label_logits = torch.Tensor([[0], [1], [1], [0]])
+    label_logits = torch.tensor([[0], [1], [1], [0]])
 
     children = children_scores(label_logits, masks=masks, features=features)
-    assert (children == [1, 0]).all()
+    assert torch.equal(children, torch.tensor([1, 0]).float())
 
-    label_logits = torch.Tensor([[0], [1], [1], [1]])
+    label_logits = torch.tensor([[0], [1], [1], [1]])
 
     children = children_scores(label_logits, masks=masks, features=features)
-    assert (children == [0.5, 0.5]).all()
+    assert torch.equal(children, torch.tensor([0.5, 0.5]).float())
