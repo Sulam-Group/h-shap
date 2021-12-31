@@ -21,13 +21,12 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install pytest pytest-cov codecov black
-            pip install -r requirements.txt
-            pip install -e .
+            python -m pip install -r requirements.txt
+            python -m pip install -e .
       - run:
           name: Test
           command: |
             . venv/bin/activate
-            pytest --cov=hshap
-            black --check --diff ./hshap
-            codecov
+            python -m pytest --cov=hshap
+            python -m black --check --diff ./hshap
+            python -m codecov

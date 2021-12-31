@@ -126,7 +126,10 @@ def mask2d(
                     (coords[0][1] + coords[1][1]) / 2,
                 )
                 feature_id = level.nonzero().squeeze()
-                (feature_row, feature_column) = (feature_id // 2, feature_id % 2)
+                (feature_row, feature_column) = (
+                    torch.div(feature_id, 2, rounding_mode="trunc"),
+                    feature_id % 2,
+                )
                 coords[0][0] = center[0] if feature_row == 1 else coords[0][0]
                 coords[0][1] = center[1] if feature_column == 1 else coords[0][1]
                 coords[1][0] = center[0] if (1 - feature_row) == 1 else coords[1][0]
@@ -136,7 +139,10 @@ def mask2d(
         feature_ids = level.nonzero().squeeze(1)
         feature_mask = torch.zeros_like(x)
         for feature_id in feature_ids:
-            (feature_row, feature_column) = (feature_id // 2, feature_id % 2)
+            (feature_row, feature_column) = (
+                torch.div(feature_id, 2, rounding_mode="trunc"),
+                feature_id % 2,
+            )
             feature_coords = coords.copy()
             feature_coords[0][0] = (
                 center[0] if feature_row == 1 else feature_coords[0][0]
