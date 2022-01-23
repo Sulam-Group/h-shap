@@ -1,31 +1,9 @@
-from typing import Callable
-from hshap.src import Node, Explainer
-from hshap.utils import make_masks, hshap_features, shapley_matrix
 import torch
-from torch import Tensor
 import numpy as np
-
-
-def test_node():
-    path = torch.tensor([[1, 1, 1, 1]]).long()
-    masks = torch.tensor(
-        [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
-    ).long()
-
-    node = Node(path)
-
-    assert torch.equal(node.path, path) and node.score == 1.0
-
-    x = torch.ones(3, 4, 4)
-    background = torch.zeros(3, 4, 4)
-
-    masked_x = node.masked_inputs(masks, x, background)
-    masked_ref = torch.zeros_like(x).unsqueeze(0).repeat(len(masks), 1, 1, 1)
-    masked_ref[0, :, :2, :2] = 1
-    masked_ref[1, :, :2, 2:] = 1
-    masked_ref[2, :, 2:, :2] = 1
-    masked_ref[3, :, 2:, 2:] = 1
-    assert torch.equal(masked_x, masked_ref)
+from hshap.src import Explainer
+from hshap.utils import make_masks, hshap_features, shapley_matrix
+from torch import Tensor
+from pytest import raises
 
 
 def test_explainer():
@@ -58,11 +36,10 @@ def test_explainer():
 
     explanation_positive_ref = np.zeros((64, 64))
     explanation_positive_ref[:2, :2] = 1
-    (explanation_positive, _) = hexp.explain(
+    explanation_positive = hexp.explain(
         x[0], 1, threshold_mode="absolute", binary_map=True
     )
     assert np.array_equal(explanation_positive, explanation_positive_ref)
 
-    explanation_negative_ref = np.zeros((64, 64))
-    (explanation_negative, _) = hexp.explain(x[1], 1, threshold_mode="absolute")
-    assert np.array_equal(explanation_negative, explanation_negative_ref)
+    with raises(ValueError, match="Could not find any important nodes."):
+        hexp.explain(x[1], 1, threshold_mode="absolute")

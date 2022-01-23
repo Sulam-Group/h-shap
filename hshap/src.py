@@ -3,48 +3,15 @@ import torch
 from torch import Tensor
 from hshap.utils import (
     hshap_features,
-    make_masks,
     shapley_matrix,
-    enumerate_batches,
-    mask2d,
+    mask_input_,
+    mask_features_,
+    mask_map_,
 )
 from typing import Callable
+import cProfile, pstats
 
-
-class Node:
-    def __init__(self, path: Tensor, score: float = 1) -> None:
-        self.path = path
-        self.score = score
-
-    def masked_inputs(
-        self,
-        masks: Tensor,
-        x: Tensor,
-        background: Tensor,
-        r: float = 0,
-        alpha: float = 0,
-    ) -> Tensor:
-        """
-        Mask input with all the masks required to compute Shapley values
-        """
-        q = list(np.ones(x.ndim + 1, dtype=np.int32))
-        q[0] = len(masks)
-
-        masked_inputs = background.repeat(q)
-        masked_inputs = torch.stack(
-            [
-                mask2d(
-                    torch.cat((self.path, _mask.unsqueeze(0)), dim=0),
-                    x,
-                    _x,
-                    r,
-                    alpha,
-                )
-                for _mask, _x in zip(masks, masked_inputs)
-            ],
-            0,
-        )
-        return masked_inputs
+pr = cProfile.Profile()
 
 
 class Explainer:
@@ -53,29 +20,77 @@ class Explainer:
         model: Callable[[Tensor], Tensor],
         background: Tensor,
         min_size: int,
-        device: torch.device = torch.device("cpu"),
     ) -> None:
         """
         Initialize explainer
         """
         self.model = model
         self.background = background
-        self.size = (self.background.shape[1], self.background.shape[2])
-        self.stop_l = np.log(min(self.size) / min_size) // np.log(2) + 2
+        self.size = (
+            self.background.size(0),
+            self.background.size(1),
+            self.background.size(2),
+        )
+        self.stop_l = (
+            np.log(min((self.size[1], self.size[2])) / min_size) // np.log(2) + 2
+        )
         self.gamma = 4
-        self.masks = make_masks(self.gamma)
         self.features = hshap_features(self.gamma)
-        self.W = shapley_matrix(self.gamma)
-        self.W = self.W.to(device)
+        self.W = shapley_matrix(self.gamma, device=background.device)
 
-    def is_leaf(self, node: Node) -> bool:
+    def masked_input_(
+        self,
+        path: np.ndarray,
+        root_input: Tensor,
+        root_coords: np.ndarray,
+        r: float = 0,
+        alpha: float = 0,
+    ) -> Tensor:
         """
-        Check if node is a leaf
+        Mask input with all the masks required to compute Shapley values
         """
-        if len(node.path) == self.stop_l:
-            return True
-        else:
-            return False
+        mask_input_(
+            input=root_input,
+            path=path,
+            background=self.background,
+            root_coords=root_coords,
+        )
+
+        feature_mask = torch.zeros_like(root_input, dtype=torch.bool).repeat(
+            len(self.features) + 1, 1, 1, 1
+        )
+        mask_features_(
+            feature_mask=feature_mask,
+            root_coords=root_coords,
+        )
+        m12 = torch.logical_or(feature_mask[1], feature_mask[2]).unsqueeze_(0)
+        m13 = torch.logical_or(feature_mask[1], feature_mask[3]).unsqueeze_(0)
+        m14 = torch.logical_or(feature_mask[1], feature_mask[4]).unsqueeze_(0)
+        m23 = torch.logical_or(feature_mask[2], feature_mask[3]).unsqueeze_(0)
+        m24 = torch.logical_or(feature_mask[2], feature_mask[4]).unsqueeze_(0)
+        m34 = torch.logical_or(feature_mask[3], feature_mask[4]).unsqueeze_(0)
+        m123 = torch.logical_or(m12, m13)
+        m124 = torch.logical_or(m12, m14)
+        m134 = torch.logical_or(m13, m14)
+        m234 = torch.logical_or(m23, m24)
+        m1234 = torch.logical_or(m123, m124)
+        m = torch.cat(
+            [
+                feature_mask[:5],
+                m12,
+                m13,
+                m14,
+                m23,
+                m24,
+                m34,
+                m123,
+                m124,
+                m134,
+                m234,
+                m1234,
+            ]
+        )
+        return torch.where(m, root_input, self.background)
 
     def explain(
         self,
@@ -86,71 +101,86 @@ class Explainer:
         r: float = 0.0,
         alpha: float = 0.0,
         softmax_activation: bool = True,
-        binary_map: bool = False,
-        **kwargs
+        batch_size: int = 2,
+        **kwargs,
     ) -> np.ndarray:
         """
         Explain image
         """
-        batch_size = 32
-        root_node = Node(path=torch.ones((1, self.gamma)).long(), score=1.0)
-        leafs = []
-        level = [root_node]
-        L = len(level)
-        while L > 0:
-            layer_scores = torch.empty((L, self.gamma))
-            for batch_id, batch in enumerate_batches(level, batch_size):
-                l = len(batch)
-                batch_input = torch.cat(
-                    [
-                        node.masked_inputs(self.masks, x, self.background, r, alpha)
-                        for node in batch
-                    ],
-                    0,
+        nodes = np.ones((1, 1, 4), dtype=np.bool_)
+        scores = torch.ones((1,), device=self.background.device).float()
+        root_coords = np.array(
+            [[[0, 0], [self.size[1], self.size[2]]]], dtype=np.uint16
+        )
+        root_inputs = x.unsqueeze_(0)
+        while nodes.shape[1] < self.stop_l:
+            scores = scores.unsqueeze_(1).repeat((1, self.gamma))
+            for batch_start_id in range(0, len(nodes), batch_size):
+                batch = nodes[batch_start_id : batch_start_id + batch_size]
+                batch_input = torch.empty_like(self.background).repeat(
+                    len(batch), 2 ** self.gamma, 1, 1, 1
                 )
-                batch_outputs = self.model(batch_input, **kwargs)
+                for n, node in enumerate(batch):
+                    batch_input[n] = self.masked_input_(
+                        node[-1],
+                        root_inputs[batch_start_id + n],
+                        root_coords[batch_start_id + n],
+                        r=r,
+                        alpha=alpha,
+                    )
+
+                F = self.model(
+                    batch_input.view(
+                        len(batch) * 2 ** self.gamma,
+                        self.size[0],
+                        self.size[1],
+                        self.size[2],
+                    ),
+                    **kwargs,
+                )
                 if softmax_activation:
-                    batch_outputs = torch.nn.functional.softmax(batch_outputs, dim=1)
-                label_outputs = batch_outputs[:, label]
-                label_outputs = label_outputs.view((l, 1, 2 ** self.gamma))
-                layer_scores[
-                    batch_id * batch_size : (batch_id + 1) * batch_size
-                ] = torch.matmul(label_outputs, self.W).squeeze(1)
+                    F = torch.nn.functional.softmax(F, dim=1)
+                F = F[:, label]
+                F = F.view((-1, 1, 2 ** self.gamma))
+                scores[batch_start_id : batch_start_id + batch_size].mul_(
+                    torch.matmul(F, self.W).squeeze_(1)
+                )
 
             if threshold_mode == "absolute":
-                masked_layer_scores = layer_scores > threshold
+                masked_scores = scores > threshold
             if threshold_mode == "relative":
-                t = np.percentile(layer_scores.flatten(), threshold)
+                t = torch.quantile(scores, threshold / 100, dim=None)
                 if t <= 0:
-                    masked_layer_scores = layer_scores > t
+                    masked_scores = scores > t
                 else:
-                    masked_layer_scores = layer_scores >= t
+                    masked_scores = scores >= t
 
-            next_level = []
-            for i, node in enumerate(level):
-                for j, relevant in enumerate(masked_layer_scores[i]):
-                    if relevant == True:
-                        child_score = layer_scores[i, j]
-                        feature = self.features[j]
-                        child = Node(
-                            torch.cat((node.path, feature.unsqueeze(0)), dim=0),
-                            score=node.score * child_score,
-                        )
-                        if self.is_leaf(child) == True:
-                            leafs.append(child)
-                        else:
-                            next_level.append(child)
-            level = next_level
-            L = len(level)
+            i, j = masked_scores.nonzero(as_tuple=True)
+            del masked_scores
+            _i, _j = i.size(0), j.size(0)
+            ic, jc = i.cpu(), j.cpu()
+            if _i == 0 and _j == 0:
+                raise ValueError("Could not find any important nodes.")
+            if _i == 1 and _j == 1:
+                nodes = np.concatenate(
+                    (nodes[None, ic], self.features[None, jc]), axis=1, dtype=np.bool_
+                )
+                root_coords = root_coords[None, ic]
+            else:
+                nodes = np.concatenate(
+                    (nodes[ic], self.features[jc]), axis=1, dtype=np.bool_
+                )
+                root_coords = root_coords[ic]
+            scores = scores[i, j]
+            root_inputs = root_inputs[i]
 
-        saliency_map = torch.zeros(1, self.size[0], self.size[1])
-        for leaf in leafs:
-            saliency_map += mask2d(
-                path=leaf.path,
-                x=torch.ones(1, self.size[0], self.size[1])
-                * (1 if binary_map else leaf.score),
-                _x=torch.zeros(1, self.size[0], self.size[1]),
-                r=r,
-                alpha=alpha,
+        saliency_map = torch.zeros(1, self.size[1], self.size[2])
+        _scores = scores.tolist()
+        for n, s, c in zip(nodes, _scores, root_coords):
+            mask_map_(
+                map=saliency_map,
+                path=n[-1],
+                score=s,
+                root_coords=c,
             )
-        return saliency_map.squeeze(), leafs
+        return saliency_map
