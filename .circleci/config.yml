@@ -4,9 +4,9 @@ orbs:
   python: circleci/python@1.3.0
 
 workflows:
-  test-and-build:
+  build:
     jobs:
-      - test-and-build
+      - build
 
 jobs:
   build:
