@@ -9,7 +9,7 @@ workflows:
       - test-and-build
 
 jobs:
-  test-and-build:
+  build:
     docker:
       - image: cimg/python:3.8
     resource_class: medium+
@@ -22,12 +22,17 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
+            python -m pip install --upgrade pip
             python -m pip install -r requirements.txt
             python -m pip install -e .
       - run:
           name: Test
           command: |
             . venv/bin/activate
-            python -m pytest --cov=hshap
+            python -m pytest --cov=hshap --junitxml=test-results/junit.xml
             python -m black --check --diff ./hshap
             python -m codecov
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
