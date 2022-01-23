@@ -1,9 +1,10 @@
 import os
 import pandas as pd
 import numpy as np
+
 # from skimage.filters import threshold_otsu
 from sklearn.metrics import f1_score
-from tqdm import tqdm 
+from tqdm import tqdm
 
 data_dir = os.path.join("data")
 explanation_dir = os.path.join("explanations")

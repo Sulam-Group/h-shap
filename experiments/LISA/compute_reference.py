@@ -21,9 +21,7 @@ transform = transforms.Compose(
 unnorm = transforms.Normalize(-mean / std, 1 / std)
 
 train_dataset = ImageFolder(os.path.join(data_dir, "train"), transform)
-dataloader = DataLoader(
-    train_dataset, batch_size=100, shuffle=True, num_workers=0
-)
+dataloader = DataLoader(train_dataset, batch_size=100, shuffle=True, num_workers=0)
 _iter = iter(dataloader)
 X, _ = next(_iter)
 ref = X.detach().mean(0)
