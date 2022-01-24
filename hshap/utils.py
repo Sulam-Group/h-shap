@@ -1,56 +1,21 @@
-from typing import Generator, Iterable, Tuple
 import torch
 import numpy as np
 from torch import Tensor
-from itertools import permutations
-from functools import reduce
 
 factorial = np.math.factorial
 
 
 def hshap_features(gamma: int) -> np.ndarray:
-    """
-    Make the required features
-    """
     return np.expand_dims(np.eye(gamma, dtype=np.bool_), axis=1)
 
 
-def make_masks(gamma: int) -> np.ndarray:
-    """
-    Make all required masks to compute Shapley values given the number of features gamma
-    and order them by their rank, where the rank is the integer obtain by concatenating
-    the indices of the nonzero elments in the mask
-    """
-    pass
-    # masks = []
-    # for i in range(1, gamma + 1):
-    #     masks.extend(list(set(permutations((gamma - i) * [0] + i * [1]))))
-    # masks = torch.tensor(masks).long()
-    # rank = torch.tensor(
-    #     [int("".join(map(str, (m.nonzero() + 1).squeeze(1).tolist()))) for m in masks]
-    # )
-    # masks = masks[rank.argsort()]
-    # masks = torch.cat((torch.zeros((1, gamma)).long(), masks))
-    # k, j = torch.nonzero(masks, as_tuple=True)
-    # masks[k, j] = j + 1
-    # return masks
-
-
 def w(c: int, gamma: int) -> int:
-    """
-    Compute the weight of a subset of features of cardinality c
-    """
     return factorial(c) * factorial(gamma - c - 1) / factorial(gamma)
 
 
 def shapley_matrix(gamma: int, device: torch.device) -> Tensor:
-    """
-    Compose the matrix to compute the Shapley values.
-    This function assumes that masks are ordered as per `make_masks`
-    definition of rank
-    """
     if gamma != 4:
-        raise NotImplementedError
+        raise NotImplementedError("Only implemented for gamma = 4")
     # construct matrix as copies of first row
     W = torch.tensor(
         [
@@ -97,7 +62,7 @@ def shapley_matrix(gamma: int, device: torch.device) -> Tensor:
 def mask_features_(
     feature_mask: Tensor,
     root_coords: np.ndarray,
-):
+) -> None:
     center = np.mean(root_coords, axis=0, dtype=np.uint16)
 
     feature_mask[
@@ -119,10 +84,7 @@ def mask_input_(
     path: np.ndarray,
     background: Tensor,
     root_coords: np.ndarray,
-):
-    """
-    Creates a masked copy of x based on node.path and the specified background
-    """
+) -> None:
     if not np.all(path):
         center = np.mean(root_coords, axis=0, dtype=np.uint16)
 

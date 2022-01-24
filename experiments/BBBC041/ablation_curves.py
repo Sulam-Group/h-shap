@@ -8,7 +8,7 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 data_dir = os.path.join("data")
@@ -64,6 +64,7 @@ exp_mapper = {
 true_positives = np.load(os.path.join(explanation_dir, "true_positive.npy"))
 
 for exp_name, exp_title in exp_mapper.items():
+    print(f"Processing {exp_name}")
     explainer_dir = os.path.join(explanation_dir, exp_name)
 
     df = []
@@ -85,7 +86,7 @@ for exp_name, exp_title in exp_mapper.items():
         original_output = model(image.unsqueeze(0))
         original_logit = F.softmax(original_output, dim=1)[:, 1]
 
-        r = 16
+        r = 32
         for j in range(0, m, r):
             batch_size = _perturbation_size[j : j + r]
             batch = image.repeat(len(batch_size), 1, 1, 1)

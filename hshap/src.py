@@ -1,17 +1,14 @@
 import numpy as np
 import torch
 from torch import Tensor
-from hshap.utils import (
+from typing import Callable
+from .utils import (
     hshap_features,
     shapley_matrix,
     mask_input_,
     mask_features_,
     mask_map_,
 )
-from typing import Callable
-import cProfile, pstats
-
-pr = cProfile.Profile()
 
 
 class Explainer:
@@ -21,9 +18,6 @@ class Explainer:
         background: Tensor,
         min_size: int,
     ) -> None:
-        """
-        Initialize explainer
-        """
         self.model = model
         self.background = background
         self.size = (
@@ -32,8 +26,8 @@ class Explainer:
             self.background.size(2),
         )
         self.stop_l = (
-            np.log(min((self.size[1], self.size[2])) / min_size) // np.log(2) + 2
-        )
+            np.log(min((self.size[1], self.size[2])) / min_size) // np.log(2)
+        ) + 2
         self.gamma = 4
         self.features = hshap_features(self.gamma)
         self.W = shapley_matrix(self.gamma, device=background.device)
@@ -43,12 +37,7 @@ class Explainer:
         path: np.ndarray,
         root_input: Tensor,
         root_coords: np.ndarray,
-        r: float = 0,
-        alpha: float = 0,
     ) -> Tensor:
-        """
-        Mask input with all the masks required to compute Shapley values
-        """
         mask_input_(
             input=root_input,
             path=path,
@@ -98,15 +87,11 @@ class Explainer:
         label: int,
         threshold_mode: str = "absolute",
         threshold: float = 0.0,
-        r: float = 0.0,
-        alpha: float = 0.0,
         softmax_activation: bool = True,
         batch_size: int = 2,
+        binary_map: bool = False,
         **kwargs,
-    ) -> np.ndarray:
-        """
-        Explain image
-        """
+    ) -> Tensor:
         nodes = np.ones((1, 1, 4), dtype=np.bool_)
         scores = torch.ones((1,), device=self.background.device).float()
         root_coords = np.array(
@@ -125,8 +110,6 @@ class Explainer:
                         node[-1],
                         root_inputs[batch_start_id + n],
                         root_coords[batch_start_id + n],
-                        r=r,
-                        alpha=alpha,
                     )
 
                 F = self.model(
@@ -180,7 +163,7 @@ class Explainer:
             mask_map_(
                 map=saliency_map,
                 path=n[-1],
-                score=s,
+                score=s if not binary_map else 1,
                 root_coords=c,
             )
         return saliency_map
