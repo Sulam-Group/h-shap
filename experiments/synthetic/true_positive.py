@@ -19,7 +19,7 @@ torch.backends.cudnn.benchmark = False
 
 model = Net()
 model.load_state_dict(
-    torch.load(os.path.join(model_dir, "_model.pt"), map_location=device)
+    torch.load(os.path.join(model_dir, "model.pt"), map_location=device)
 )
 model.to(device)
 model.eval()

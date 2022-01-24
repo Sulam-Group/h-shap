@@ -5,7 +5,7 @@ from sklearn.metrics import f1_score
 from tqdm import tqdm
 
 data_dir = os.path.join("data")
-annotation_dir = os.path.join(data_dir, "Annotations", "Annotations")
+annotation_dir = os.path.join(data_dir, "annotations")
 explanation_dir = os.path.join("explanations")
 
 exp_mapper = {
