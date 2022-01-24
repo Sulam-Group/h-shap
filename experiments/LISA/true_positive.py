@@ -7,7 +7,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "8"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 torch.backends.cudnn.deterministic = True
@@ -42,6 +42,7 @@ dataset = ImageFolder(os.path.join(data_dir, "val"), t)
 dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=4, shuffle=False)
 image_names = [os.path.basename(x[0]) for x in dataset.samples]
 
+correct = 0
 for i, data in enumerate(tqdm(dataloader)):
     input, label = data
 
@@ -50,6 +51,8 @@ for i, data in enumerate(tqdm(dataloader)):
 
     output = model(input)
     prediction = output.argmax(dim=1)
+
+    correct += torch.sum(prediction == label)
 
     for j, label in enumerate(label):
         if label > 0:
@@ -61,6 +64,7 @@ for i, data in enumerate(tqdm(dataloader)):
             else:
                 false_negative.append(image_path)
 
+print(f"Test accuracy: {correct.item() / len(dataset)*100:.2f}%")
 print(f"True positive count: {len(true_positive)}")
 print(f"False negative count: {len(false_negative)}")
 np.save(os.path.join(explanation_dir, "true_positive"), true_positive)
