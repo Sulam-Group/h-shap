@@ -40,7 +40,7 @@ transform = transforms.Compose(
 ref = torch.load(os.path.join(explanation_dir, "reference.pt"), map_location=device)
 
 A = ref.size(1) * ref.size(2)
-L = 100
+L = 200
 exp_perturbation_size = np.linspace(np.log10(1 / A), 0, L)
 relative_perturbation_size = np.sort(10 ** (exp_perturbation_size))
 perturbation_size = np.round(A * relative_perturbation_size)

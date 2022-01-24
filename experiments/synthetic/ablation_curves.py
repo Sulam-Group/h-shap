@@ -8,7 +8,7 @@ from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 data_dir = os.path.join("data")
@@ -21,7 +21,7 @@ torch.backends.cudnn.benchmark = False
 
 model = Net()
 model.load_state_dict(
-    torch.load(os.path.join(model_dir, "_model.pt")),
+    torch.load(os.path.join(model_dir, "model.pt")),
 )
 model = model.to(device)
 model.eval()
@@ -41,7 +41,7 @@ transform = transforms.Compose(
 ref = torch.load(os.path.join(explanation_dir, "reference.pt"), map_location=device)
 
 A = ref.size(1) * ref.size(2)
-L = 100
+L = 200
 exp_perturbation_size = np.linspace(np.log10(1 / A), 0, L)
 relative_perturbation_size = np.sort(10 ** (exp_perturbation_size))
 perturbation_size = np.round(A * relative_perturbation_size)
