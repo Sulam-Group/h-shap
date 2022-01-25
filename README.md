@@ -5,7 +5,7 @@
 
 h-Shap provides a fast, hierarchical implementation of Shapley coefficients for image explanations. It is exact, and it does not rely on approximation. In binary classification scenarios, h-Shap guarantees an exponential computational advantage when explaining an important concept contained in the image (e.g. a sick cell in a blood smear, see example image below).
 
-![Explanation example](./demo/explanations/2ac343e4-c889-47c1-8fe2-461b626def76.jpg)
+![Explanation example](./demo/explanations/2f6224be-50d0-4e85-94ef-88315df561b6.jpg)
 
 ## Installation
 
