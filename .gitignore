@@ -14,4 +14,3 @@ experiments/**/random_model_explanations
 experiments/**/pretrained_model
 experiments/**/figures
 experiments/synthetic/test_partexp.ipynb
-demo/

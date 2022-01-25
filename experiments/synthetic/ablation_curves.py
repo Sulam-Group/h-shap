@@ -90,7 +90,7 @@ for n in c:
             original_output = model(image.unsqueeze(0))
             original_logit = F.softmax(original_output, dim=1)[:, 1]
 
-            r = 16
+            r = L
             for j in range(0, m, r):
                 batch_size = _perturbation_size[j : j + r]
                 batch = image.repeat(len(batch_size), 1, 1, 1)

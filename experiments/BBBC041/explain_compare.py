@@ -13,7 +13,7 @@ from pytorch_grad_cam import GradCAM
 from lime import lime_image
 from lime.wrappers.scikit_image import SegmentationAlgorithm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "9"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 data_dir = os.path.join("data")
@@ -184,15 +184,15 @@ def hexp_explain(hexp, image_t):
 
 
 exp_mapper = [
-    {"name": "gradcam", "init": cam_init, "explain": cam_explain},
-    {"name": "gradexp", "init": gradexp_init, "explain": gradexp_explain},
-    {"name": "deepexp", "init": deepexp_init, "explain": deepexp_explain},
-    {"name": "partexp/500", "init": partexp_init, "explain": partexp_explain},
-    {"name": "partexp/128", "init": partexp_init, "explain": partexp_explain},
-    {"name": "partexp/64", "init": partexp_init, "explain": partexp_explain},
-    {"name": "partexp/32", "init": partexp_init, "explain": partexp_explain},
-    {"name": "partexp/16", "init": partexp_init, "explain": partexp_explain},
-    {"name": "hexp/absolute_0", "init": hexp_init, "explain": hexp_explain},
+    # {"name": "gradcam", "init": cam_init, "explain": cam_explain},
+    # {"name": "gradexp", "init": gradexp_init, "explain": gradexp_explain},
+    # {"name": "deepexp", "init": deepexp_init, "explain": deepexp_explain},
+    # {"name": "partexp/500", "init": partexp_init, "explain": partexp_explain},
+    # {"name": "partexp/128", "init": partexp_init, "explain": partexp_explain},
+    # {"name": "partexp/64", "init": partexp_init, "explain": partexp_explain},
+    # {"name": "partexp/32", "init": partexp_init, "explain": partexp_explain},
+    # {"name": "partexp/16", "init": partexp_init, "explain": partexp_explain},
+    # {"name": "hexp/absolute_0", "init": hexp_init, "explain": hexp_explain},
     {"name": "hexp/relative_70", "init": hexp_init, "explain": hexp_explain},
     {"name": "lime", "init": lime_init, "explain": lime_explain},
 ]
@@ -235,5 +235,5 @@ for exp in exp_mapper:
             raise NotImplementedError(f"{exp_name} is not implemented")
         comp_times.append(runtime)
         print(f"{exp_name}: {i+1}/{len(true_positives)} runtime={runtime:4f} s")
-        np.save(os.path.join(explainer_dir, image_name), explanation)
+        # np.save(os.path.join(explainer_dir, image_name), explanation)
     np.save(os.path.join(explainer_dir, f"comp_times.npy"), comp_times)
