@@ -1,7 +1,8 @@
 # h-Shap
 
 [![codecov](https://codecov.io/gh/Sulam-Group/h-shap/branch/circleci-setup/graph/badge.svg?token=BTDZGRL8FK)](https://codecov.io/gh/Sulam-Group/h-shap)
-[![Sulam-Group](https://circleci.com/gh/Sulam-Group/h-shap.svg?style=shield&circle-token=6570e24862d00e6ab61a24ffc93b4317fc50f262)](https://circleci.com/gh/Sulam-Group/h-shap)
+[![circleci](https://circleci.com/gh/Sulam-Group/h-shap.svg?style=shield&circle-token=6570e24862d00e6ab61a24ffc93b4317fc50f262)](https://circleci.com/gh/Sulam-Group/h-shap)
+[![zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.5914342.svg)](https://zenodo.org/record/5914342)
 
 h-Shap provides a fast, hierarchical implementation of Shapley coefficients for image explanations. It is exact, and it does not rely on approximation. In binary classification scenarios, h-Shap guarantees an exponential computational advantage when explaining an important concept contained in the image (e.g. a sick cell in a blood smear, see example image below).
 
