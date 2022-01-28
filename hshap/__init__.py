@@ -1,7 +1,3 @@
-import hshap.src
-import hshap.utils
+__version__ = "0.0.2"
 
-from hshap.src import *
-from hshap.utils import *
-
-__version__ = "0.0.1"
+from .src import Explainer

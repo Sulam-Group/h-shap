@@ -2,10 +2,15 @@
 .ipynb_checkpoints
 .coverage
 data
-experiments/
 **/__pycache__/
 .pytest_cache/
 venv/
 docs/
 **.egg-info/
 coverage.xml
+experiments/**/data
+experiments/**/explanations
+experiments/**/random_model_explanations
+experiments/**/pretrained_model
+experiments/**/figures
+experiments/synthetic/test_partexp.ipynb
