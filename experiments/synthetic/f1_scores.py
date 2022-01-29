@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-from skimage.filters import threshold_otsu
 from sklearn.metrics import f1_score
 from tqdm import tqdm
 
