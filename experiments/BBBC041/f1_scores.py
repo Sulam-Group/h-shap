@@ -1,8 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-
-# from skimage.filters import threshold_otsu
 from sklearn.metrics import f1_score
 from tqdm import tqdm
 
@@ -62,9 +60,6 @@ for exp_name, exp_title in exp_mapper.items():
         explanation = (explanation > eps).flatten()
 
         score = f1_score(ground_truth, explanation)
-        score_otsu = 0.0
-        # t = threshold_otsu(explanation)
-        # score_otsu = f1_score(ground_truth.flatten(), explanation.flatten() > t)
         runtime = comp_time[i]
         if runtime > 0 and score > 0:
             df.append(
@@ -73,7 +68,6 @@ for exp_name, exp_title in exp_mapper.items():
                     "exp_title": exp_title,
                     "comp_time": runtime,
                     "score": score,
-                    "score_otsu": score_otsu,
                 }
             )
     df = pd.DataFrame(df)
