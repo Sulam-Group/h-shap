@@ -92,7 +92,7 @@ class Explainer:
         binary_map: bool = False,
         **kwargs,
     ) -> Tensor:
-        nodes = np.ones((1, 1, 4), dtype=np.bool_)
+        nodes = np.ones((1, 1, self.gamma), dtype=np.bool_)
         scores = torch.ones((1,), device=self.background.device).float()
         root_coords = np.array(
             [[[0, 0], [self.size[1], self.size[2]]]], dtype=np.uint16
@@ -166,4 +166,106 @@ class Explainer:
                 score=s if not binary_map else 1,
                 root_coords=c,
             )
+        return saliency_map
+
+
+class BagExplainer:
+    def __init__(
+        self,
+        model,
+        out_features: int = 1,
+        device=torch.device("cuda:0")
+        if torch.cuda.is_available()
+        else torch.device("cpu"),
+    ):
+        self.model = model
+        self.gamma = 2
+        self.features = hshap_features(self.gamma)
+        self.W = shapley_matrix(self.gamma, device=device)
+        self.empty_output = torch.zeros(1, out_features, device=device)
+
+    def explain(
+        self,
+        bag: Tensor,
+        label: int = 0,
+        s: int = 1,
+        threshold_mode: str = "absolute",
+        threshold: float = 0.0,
+        softmax_activation: bool = False,
+        binary_map: bool = False,
+        **kwargs,
+    ) -> Tensor:
+        r = bag.size(0)
+        stop_l = (np.log(r / s) // np.log(2)) + 2
+        nodes = np.ones((1, 1, self.gamma), dtype=np.bool_)
+        scores = torch.ones((1,), device=bag.device).float()
+        root_coords = np.array([[0, r]], dtype=np.uint16)
+        while nodes.shape[1] < stop_l:
+            scores = scores.unsqueeze_(1).repeat((1, self.gamma))
+            for i, node in enumerate(nodes):
+                path = node[-1]
+                if not np.all(path):
+                    center = np.mean(root_coords[i], dtype=np.uint16)
+                    feature_id = np.nonzero(path)[0][0]
+                    root_coords[i][0] = center if feature_id == 1 else root_coords[i][0]
+                    root_coords[i][1] = center if feature_id == 0 else root_coords[i][1]
+                center = np.mean(root_coords[i], dtype=np.uint16)
+                F = torch.cat(
+                    [
+                        self.empty_output,
+                        self.model(
+                            bag[root_coords[i][0] : center],
+                            **kwargs,
+                        ),
+                        self.model(
+                            bag[center : root_coords[i][1]],
+                            **kwargs,
+                        ),
+                        self.model(
+                            bag[root_coords[i][0] : root_coords[i][1]],
+                            **kwargs,
+                        ),
+                    ],
+                )
+                if softmax_activation:
+                    F = torch.nn.functional.softmax(F, dim=1)
+                F = F[:, label]
+                scores[i].mul_(torch.matmul(F, self.W))
+
+            if threshold_mode == "absolute":
+                masked_scores = scores > threshold
+            if threshold_mode == "relative":
+                t = torch.quantile(scores, threshold / 100, dim=None)
+                if t <= 0:
+                    masked_scores = scores > t
+                else:
+                    masked_scores = scores >= t
+
+            i, j = masked_scores.nonzero(as_tuple=True)
+            del masked_scores
+            _i, _j = i.size(0), j.size(0)
+            ic, jc = i.cpu(), j.cpu()
+            if _i == 0 and _j == 0:
+                raise ValueError("Could not find any important nodes.")
+            if _i == 1 and _j == 1:
+                nodes = np.concatenate(
+                    (nodes[None, ic], self.features[None, jc]), axis=1, dtype=np.bool_
+                )
+                root_coords = root_coords[None, ic]
+            else:
+                nodes = np.concatenate(
+                    (nodes[ic], self.features[jc]), axis=1, dtype=np.bool_
+                )
+                root_coords = root_coords[ic]
+            scores = scores[i, j]
+
+        saliency_map = torch.zeros((r,))
+        _scores = scores.tolist()
+        for n, s, c in zip(nodes, _scores, root_coords):
+            center = np.mean(c, dtype=np.uint16)
+            path = n[-1]
+            if path[0] == 1:
+                saliency_map[c[0] : center] = s if not binary_map else 1
+            elif path[1] == 1:
+                saliency_map[center : c[1]] = s if not binary_map else 1
         return saliency_map

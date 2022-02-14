@@ -14,47 +14,56 @@ def w(c: int, gamma: int) -> int:
 
 
 def shapley_matrix(gamma: int, device: torch.device) -> Tensor:
-    if gamma != 4:
-        raise NotImplementedError("Only implemented for gamma = 4")
-    # construct matrix as copies of first row
-    W = torch.tensor(
-        [
-            [-w(0, gamma), w(0, gamma)]
-            + 3 * [-w(1, gamma)]
-            + 3 * [w(1, gamma)]
-            + 3 * [-w(2, gamma)]
-            + 3 * [w(2, gamma)]
-            + [-w(3, gamma), w(3, gamma)]
-        ],
-        device=device,
-    ).repeat(gamma, 1)
-    # update second row
-    W[1, 1] = -w(1, gamma)
-    W[1, 2] = w(0, gamma)
-    W[1, 6] = -w(2, gamma)
-    W[1, 7] = -w(2, gamma)
-    W[1, 8] = w(1, gamma)
-    W[1, 9] = w(1, gamma)
-    W[1, -3] = -w(3, gamma)
-    W[1, -2] = w(2, gamma)
-    # update second row
-    W[2, 1] = -w(1, gamma)
-    W[2, 3] = w(0, gamma)
-    W[2, 5] = -w(2, gamma)
-    W[2, 7] = -w(2, gamma)
-    W[2, 8] = w(1, gamma)
-    W[2, 10] = w(1, gamma)
-    W[2, -4] = -w(3, gamma)
-    W[2, -2] = w(2, gamma)
-    # update third row
-    W[3, 1] = -w(1, gamma)
-    W[3, 4] = w(0, gamma)
-    W[3, 5] = -w(2, gamma)
-    W[3, 6] = -w(2, gamma)
-    W[3, 9] = w(1, gamma)
-    W[3, 10] = w(1, gamma)
-    W[3, -5] = -w(3, gamma)
-    W[3, -2] = w(2, gamma)
+    if gamma == 2:
+        W = torch.tensor(
+            [
+                [-w(0, gamma), w(0, gamma), -w(1, gamma), w(1, gamma)],
+                [-w(0, gamma), -w(1, gamma), w(0, gamma), w(1, gamma)],
+            ],
+            device=device,
+        )
+    elif gamma == 4:
+        # construct matrix as copies of first row
+        W = torch.tensor(
+            [
+                [-w(0, gamma), w(0, gamma)]
+                + 3 * [-w(1, gamma)]
+                + 3 * [w(1, gamma)]
+                + 3 * [-w(2, gamma)]
+                + 3 * [w(2, gamma)]
+                + [-w(3, gamma), w(3, gamma)]
+            ],
+            device=device,
+        ).repeat(gamma, 1)
+        # update second row
+        W[1, 1] = -w(1, gamma)
+        W[1, 2] = w(0, gamma)
+        W[1, 6] = -w(2, gamma)
+        W[1, 7] = -w(2, gamma)
+        W[1, 8] = w(1, gamma)
+        W[1, 9] = w(1, gamma)
+        W[1, -3] = -w(3, gamma)
+        W[1, -2] = w(2, gamma)
+        # update second row
+        W[2, 1] = -w(1, gamma)
+        W[2, 3] = w(0, gamma)
+        W[2, 5] = -w(2, gamma)
+        W[2, 7] = -w(2, gamma)
+        W[2, 8] = w(1, gamma)
+        W[2, 10] = w(1, gamma)
+        W[2, -4] = -w(3, gamma)
+        W[2, -2] = w(2, gamma)
+        # update third row
+        W[3, 1] = -w(1, gamma)
+        W[3, 4] = w(0, gamma)
+        W[3, 5] = -w(2, gamma)
+        W[3, 6] = -w(2, gamma)
+        W[3, 9] = w(1, gamma)
+        W[3, 10] = w(1, gamma)
+        W[3, -5] = -w(3, gamma)
+        W[3, -2] = w(2, gamma)
+    else:
+        return NotImplementedError("Only implemented for gamma equals to 2 or 4")
 
     return W.transpose(0, 1)
 
