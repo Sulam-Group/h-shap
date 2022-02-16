@@ -63,7 +63,7 @@ def shapley_matrix(gamma: int, device: torch.device) -> Tensor:
         W[3, -5] = -w(3, gamma)
         W[3, -2] = w(2, gamma)
     else:
-        return NotImplementedError("Only implemented for gamma equals to 2 or 4")
+        raise NotImplementedError("Only implemented for gamma equals to 2 or 4")
 
     return W.transpose(0, 1)
 

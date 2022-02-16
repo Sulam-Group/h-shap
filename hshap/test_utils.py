@@ -50,7 +50,9 @@ def test_shapley_matrix():
         torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     )
 
-    with raises(NotImplementedError, match="Only implemented for gamma = 4"):
+    with raises(
+        NotImplementedError, match="Only implemented for gamma equals to 2 or 4"
+    ):
         shapley_matrix(gamma, device)
 
     gamma = 4
