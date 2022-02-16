@@ -44,7 +44,7 @@ def shapley_matrix(gamma: int, device: torch.device) -> Tensor:
         W[1, 9] = w(1, gamma)
         W[1, -3] = -w(3, gamma)
         W[1, -2] = w(2, gamma)
-        # update second row
+        # update third row
         W[2, 1] = -w(1, gamma)
         W[2, 3] = w(0, gamma)
         W[2, 5] = -w(2, gamma)
@@ -53,7 +53,7 @@ def shapley_matrix(gamma: int, device: torch.device) -> Tensor:
         W[2, 10] = w(1, gamma)
         W[2, -4] = -w(3, gamma)
         W[2, -2] = w(2, gamma)
-        # update third row
+        # update fourth row
         W[3, 1] = -w(1, gamma)
         W[3, 4] = w(0, gamma)
         W[3, 5] = -w(2, gamma)

@@ -16,7 +16,6 @@ class Explainer:
         self,
         model: Callable[[Tensor], Tensor],
         background: Tensor,
-        min_size: int,
     ) -> None:
         self.model = model
         self.background = background
@@ -25,9 +24,6 @@ class Explainer:
             self.background.size(1),
             self.background.size(2),
         )
-        self.stop_l = (
-            np.log(min((self.size[1], self.size[2])) / min_size) // np.log(2)
-        ) + 2
         self.gamma = 4
         self.features = hshap_features(self.gamma)
         self.W = shapley_matrix(self.gamma, device=background.device)
@@ -85,20 +81,26 @@ class Explainer:
         self,
         x: Tensor,
         label: int,
+        s: int,
         threshold_mode: str = "absolute",
         threshold: float = 0.0,
         softmax_activation: bool = True,
         batch_size: int = 2,
         binary_map: bool = False,
+        roll_row: int = 0,
+        roll_column: int = 0,
         **kwargs,
     ) -> Tensor:
+        stop_l = np.log2(min(self.size[1], self.size[2]) / s) + 1
         nodes = np.ones((1, 1, self.gamma), dtype=np.bool_)
         scores = torch.ones((1,), device=self.background.device).float()
         root_coords = np.array(
             [[[0, 0], [self.size[1], self.size[2]]]], dtype=np.uint16
         )
+        if roll_row != 0 or roll_column != 0:
+            x = torch.roll(x, shifts=(-roll_row, -roll_column), dims=(1, 2))
         root_inputs = x.unsqueeze_(0)
-        while nodes.shape[1] < self.stop_l:
+        while nodes.shape[1] < stop_l:
             scores = scores.unsqueeze_(1).repeat((1, self.gamma))
             for batch_start_id in range(0, len(nodes), batch_size):
                 batch = nodes[batch_start_id : batch_start_id + batch_size]
@@ -111,6 +113,10 @@ class Explainer:
                         root_inputs[batch_start_id + n],
                         root_coords[batch_start_id + n],
                     )
+                    if roll_row != 0 or roll_column != 0:
+                        batch_input[n] = torch.roll(
+                            batch_input[n], shifts=(roll_row, roll_column), dims=(2, 3)
+                        )
 
                 F = self.model(
                     batch_input.view(
@@ -130,7 +136,7 @@ class Explainer:
                 )
 
             if threshold_mode == "absolute":
-                masked_scores = scores > threshold
+                masked_scores = scores > (1e-7 if (threshold < 1e-7) else threshold)
             if threshold_mode == "relative":
                 t = torch.quantile(scores, threshold / 100, dim=None)
                 if t <= 0:
@@ -166,23 +172,24 @@ class Explainer:
                 score=s if not binary_map else 1,
                 root_coords=c,
             )
+        if roll_row != 0 or roll_column != 0:
+            saliency_map = torch.roll(
+                saliency_map, shifts=(roll_row, roll_column), dims=(1, 2)
+            )
         return saliency_map
 
 
 class BagExplainer:
     def __init__(
         self,
-        model,
-        out_features: int = 1,
-        device=torch.device("cuda:0")
-        if torch.cuda.is_available()
-        else torch.device("cpu"),
+        model: Callable[[Tensor], Tensor],
+        empty_output: Tensor,
     ):
         self.model = model
+        self.empty_output = empty_output
         self.gamma = 2
         self.features = hshap_features(self.gamma)
-        self.W = shapley_matrix(self.gamma, device=device)
-        self.empty_output = torch.zeros(1, out_features, device=device)
+        self.W = shapley_matrix(self.gamma, device=empty_output.device)
 
     def explain(
         self,
@@ -196,7 +203,7 @@ class BagExplainer:
         **kwargs,
     ) -> Tensor:
         r = bag.size(0)
-        stop_l = (np.log(r / s) // np.log(2)) + 2
+        stop_l = np.log2(r / s) + 1
         nodes = np.ones((1, 1, self.gamma), dtype=np.bool_)
         scores = torch.ones((1,), device=bag.device).float()
         root_coords = np.array([[0, r]], dtype=np.uint16)
@@ -213,15 +220,21 @@ class BagExplainer:
                 F = torch.cat(
                     [
                         self.empty_output,
-                        self.model(
+                        self.empty_output
+                        if center - root_coords[i][0] == 0
+                        else self.model(
                             bag[root_coords[i][0] : center],
                             **kwargs,
                         ),
-                        self.model(
+                        self.empty_output
+                        if root_coords[i][1] - center == 0
+                        else self.model(
                             bag[center : root_coords[i][1]],
                             **kwargs,
                         ),
-                        self.model(
+                        self.empty_output
+                        if root_coords[i][1] - root_coords[i][0] == 0
+                        else self.model(
                             bag[root_coords[i][0] : root_coords[i][1]],
                             **kwargs,
                         ),
