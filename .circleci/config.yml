@@ -29,6 +29,7 @@ jobs:
           name: Test
           command: |
             . venv/bin/activate
+            mkdir test-results
             python -m pytest --cov=hshap --junitxml=test-results/junit.xml
             python -m black --check --diff ./hshap
             python -m codecov
