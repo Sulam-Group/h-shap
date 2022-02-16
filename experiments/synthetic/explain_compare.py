@@ -180,7 +180,7 @@ def hexp_init():
     hexp = hshap.src.Explainer(
         model=model,
         background=ref,
-        min_size=s,
+        s=s,
     )
     return hexp
 
