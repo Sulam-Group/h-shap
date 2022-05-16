@@ -41,7 +41,7 @@ def test_explainer():
             s=1,
             threshold_mode="absolute",
             threshold=0.0,
-            softmax_activation=True,
+            softmax_activation=False,
             batch_size=2,
             binary_map=True,
         ),

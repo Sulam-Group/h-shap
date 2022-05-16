@@ -85,7 +85,7 @@ class Explainer:
         threshold_mode: str = "absolute",
         threshold: float = 0.0,
         softmax_activation: bool = True,
-        batch_size: int = 2,
+        batch_size: int = 1,
         binary_map: bool = False,
         roll_row: int = 0,
         roll_column: int = 0,
@@ -149,7 +149,7 @@ class Explainer:
             _i, _j = i.size(0), j.size(0)
             ic, jc = i.cpu(), j.cpu()
             if _i == 0 and _j == 0:
-                raise ValueError("Could not find any important nodes.")
+                return torch.zeros(1, self.size[1], self.size[2])
             if _i == 1 and _j == 1:
                 nodes = np.concatenate(
                     (nodes[None, ic], self.features[None, jc]), axis=1, dtype=np.bool_
@@ -177,6 +177,46 @@ class Explainer:
                 saliency_map, shifts=(roll_row, roll_column), dims=(1, 2)
             )
         return saliency_map
+
+    def cycle_explain(
+        self,
+        x: Tensor,
+        label: int,
+        s: int,
+        nr: int = 0,
+        na: int = 0,
+        threshold_mode: str = "absolute",
+        threshold: float = 0.0,
+        softmax_activation: bool = True,
+        batch_size: int = 1,
+        binary_map: bool = False,
+        **kwargs,
+    ):
+        R = np.linspace(0, s, nr + 1)
+        A = np.linspace(0, 2 * np.pi, na)
+        saliency_map = torch.zeros(1, self.size[1], self.size[2])
+        for r in R:
+            for a in A:
+                if r == 0 and a != 0:
+                    continue
+                else:
+                    roll_row = -int(r * np.sin(a))
+                    roll_column = int(r * np.cos(a))
+
+                    saliency_map += self.explain(
+                        x.clone(),
+                        label=label,
+                        s=s,
+                        threshold_mode=threshold_mode,
+                        threshold=threshold,
+                        softmax_activation=softmax_activation,
+                        batch_size=batch_size,
+                        binary_map=binary_map,
+                        roll_row=roll_row,
+                        roll_column=roll_column,
+                        **kwargs,
+                    )
+        return saliency_map.squeeze() / (len(R) * len(A))
 
 
 class BagExplainer:
@@ -246,7 +286,7 @@ class BagExplainer:
                 scores[i].mul_(torch.matmul(F, self.W))
 
             if threshold_mode == "absolute":
-                masked_scores = scores > threshold
+                masked_scores = scores > (1e-7 if (threshold < 1e-7) else threshold)
             if threshold_mode == "relative":
                 t = torch.quantile(scores, threshold / 100, dim=None)
                 if t <= 0:
@@ -259,7 +299,8 @@ class BagExplainer:
             _i, _j = i.size(0), j.size(0)
             ic, jc = i.cpu(), j.cpu()
             if _i == 0 and _j == 0:
-                raise ValueError("Could not find any important nodes.")
+                return torch.zeros((r,))
+                # raise ValueError("Could not find any important nodes.")
             if _i == 1 and _j == 1:
                 nodes = np.concatenate(
                     (nodes[None, ic], self.features[None, jc]), axis=1, dtype=np.bool_
