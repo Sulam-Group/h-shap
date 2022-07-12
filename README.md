@@ -50,13 +50,16 @@ h-Shap received a Best Paper Award at the ICML 2021 Workshop on Interpretable Ma
 
 ## Publications
 
-Details on h-Shap and results of our experiments are included in our [arxiv preprint](https://arxiv.org/abs/2104.06164). When referring to h-Shap, we would highly appreciate if people could cite:
+When using h-Shap, please refer to our publication in 
 
 ```text
-@article{teneggi2021fast,
-  title={Fast Hierarchical Games for Image Explanations},
+@article{Teneggi2022fast,
+  title={Fast Hierarchical Games for Image Explanations}, 
   author={Teneggi, Jacopo and Luster, Alexandre and Sulam, Jeremias},
-  journal={arXiv preprint arXiv:2104.06164},
-  year={2021}
-}
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence}, 
+  year={2022},
+  volume={},
+  number={},
+  pages={1-11},
+  doi={10.1109/TPAMI.2022.3189849}}
 ```
