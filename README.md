@@ -50,16 +50,14 @@ h-Shap received a Best Paper Award at the ICML 2021 Workshop on Interpretable Ma
 
 ## Publications
 
-When using h-Shap, please refer to our publication in 
+When using h-Shap, please cite
 
 ```text
-@article{Teneggi2022fast,
-  title={Fast Hierarchical Games for Image Explanations}, 
+@article{teneggi2022fast,
+  title={Fast hierarchical games for image explanations},
   author={Teneggi, Jacopo and Luster, Alexandre and Sulam, Jeremias},
-  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence}, 
+  journal={IEEE Transactions on Pattern Analysis and Machine Intelligence},
   year={2022},
-  volume={},
-  number={},
-  pages={1-11},
-  doi={10.1109/TPAMI.2022.3189849}}
+  publisher={IEEE}
+}
 ```

@@ -1,25 +1,27 @@
-import os
-import sys
 from setuptools import setup, find_packages
-from sys import platform
 
-PACKAGE_NAME = "hshap"
-AUTHOR = ("Jacopo Teneggi", "Alexandre Luster", "Jeremias Sulam")
+VERSION = "0.1.2"
+PACKAGE_NAME = "h-shap"
+DESCRIPTION = "Fast Hierarchical Games for Image Explanations"
+LONG_DESCRIPTION = "`h-shap` provides a fast, hierarchical implementation of Shapley coefficients for image explanations. It is exact, and it does not rely on approximation. In binary classification scenarios, `h-shap` guarantees an exponential computational advantage when explaining an important concept contained in the image."
+AUTHOR = "Jacopo Teneggi"
 AUTHOR_EMAIL = "jtenegg1@jhu.edu"
-
-# Find mouselight_code version.
-PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
-for line in open(os.path.join(PROJECT_PATH, "hshap", "__init__.py")):
-    if line.startswith("__version__ = "):
-        VERSION = line.strip().split()[2][1:-1]
-        print(VERSION)
 
 setup(
     name=PACKAGE_NAME,
     version=VERSION,
+    description=DESCRIPTION,
+    long_description=LONG_DESCRIPTION,
+    url="https://github.com/Sulam-Group/h-shap",
     author=AUTHOR,
     author_email=AUTHOR_EMAIL,
-    license="Apache License 2.0",
+    license="MIT",
     packages=find_packages(),
-    include_package_data=True,
+    install_requires=["numpy", "torch"],
+    classifiers=[
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Developers",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+    ],
 )
