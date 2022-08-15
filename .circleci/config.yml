@@ -38,7 +38,7 @@ jobs:
             pipenv run twine upload --repository testpypi dist/*
   pypi_publish:
     docker:
-      - image: cimg/python:3.9.12
+      - image: cimg/python:3.9
     resource_class: medium+
     steps:
       - checkout
