@@ -17,6 +17,7 @@ jobs:
       - run:
           name: Test
           command: |
+            mkdir test-results/
             pipenv run pytest --cov=hshap --junitxml=test-results/junit.xml
             pipenv run codecov
       - store_test_results:
