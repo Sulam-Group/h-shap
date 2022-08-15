@@ -13,6 +13,7 @@ jobs:
             python setup.py sdist bdist_wheel
             pipenv install dist/*.whl
             pipenv install pytest
+            pipenv install codecov
       - run:
           name: Test
           command: |
