@@ -29,19 +29,19 @@ def test_w():
 
     c = 0
     expected = 6 / 24
-    assert approx(w(c, gamma) == expected)
+    assert w(c, gamma) == approx(expected)
 
     c = 1
     expected = 2 / 24
-    assert approx(w(c, gamma) == expected)
+    assert w(c, gamma) == approx(expected)
 
     c = 2
     expected = 2 / 24
-    assert approx(w(c, gamma) == expected)
+    assert w(c, gamma) == approx(expected)
 
     c = 3
     expected = 6 / 24
-    assert approx(w(c, gamma) == expected)
+    assert w(c, gamma) == approx(expected)
 
 
 def test_shapley_matrix():

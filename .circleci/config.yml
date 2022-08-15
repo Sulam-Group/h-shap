@@ -1,38 +1,70 @@
 version: 2.1
 
-orbs:
-  python: circleci/python@1.3.0
-
-workflows:
-  build:
-    jobs:
-      - build
-
 jobs:
-  build:
+  build_test:
     docker:
-      - image: cimg/python:3.8
+      - image: cimg/python:3.9.12
     resource_class: medium+
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
       - run:
-          name: Install dependencies
+          name: Create whl and install
           command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            python -m pip install --upgrade pip
-            python -m pip install -r requirements.txt
-            python -m pip install -e .
+            python setup.py sdist bdist_wheel
+            sudo pip install pipenv
+            pipenv install dist/*.whl
+            pipenv install pytest
       - run:
           name: Test
           command: |
-            . venv/bin/activate
-            python -m pytest --cov=hshap --junitxml=test-results/junit.xml
-            python -m black --check --diff ./hshap
-            python -m codecov
+            pipenv run pytest --cov=hshap --junitxml=test-results/junit.xml
+            pipenv run codecov
       - store_test_results:
           path: test-results
       - store_artifacts:
           path: test-results
+  test_pypi_publish:
+    docker:
+      - image: cimg/python:3.9.12
+    resource_class: medium+
+    steps:
+      - checkout
+      - run:
+          name: Create whl and publish to Test PyPI
+          command: |
+            python setup.py sdist bdist_wheel
+            sudo pip install pipenv
+            pipenv install twine
+            pipenv run twine upload --repository testpypi dist/*
+  pypi_publish:
+    docker:
+      - image: cimg/python:3.9.12
+    resource_class: medium+
+    steps:
+      - checkout
+      - run:
+          name: Create whl and publish to PyPI
+          command: |
+            python setup.py sdist bdist_wheel
+            sudo pip install pipenv
+            pipenv install twine
+            pipenv run twine upload dist/*
+
+workflows:
+  build_test_publish:
+    jobs:
+      - build_test
+      - test_pypi_publish:
+          requires:
+            - build_test
+          filters:
+            branches:
+              only:
+                - dev
+      - pypi_publish:
+          requires:
+            - build_test
+          filters:
+            branches:
+              only:
+                - main
