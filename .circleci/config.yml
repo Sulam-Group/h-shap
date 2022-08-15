@@ -11,7 +11,6 @@ jobs:
           name: Create whl and install
           command: |
             python setup.py sdist bdist_wheel
-            sudo pip install pipenv
             pipenv install dist/*.whl
             pipenv install pytest
       - run:
@@ -33,7 +32,6 @@ jobs:
           name: Create whl and publish to Test PyPI
           command: |
             python setup.py sdist bdist_wheel
-            sudo pip install pipenv
             pipenv install twine
             pipenv run twine upload --repository testpypi dist/*
   pypi_publish:
@@ -46,7 +44,6 @@ jobs:
           name: Create whl and publish to PyPI
           command: |
             python setup.py sdist bdist_wheel
-            sudo pip install pipenv
             pipenv install twine
             pipenv run twine upload dist/*
 
