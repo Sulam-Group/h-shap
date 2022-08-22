@@ -189,3 +189,33 @@ class Explainer:
                 saliency_map, shifts=(roll_row, roll_column), dims=(1, 2)
             )
         return saliency_map
+
+    def cycle_explain(
+        self,
+        x: Tensor,
+        label: int,
+        s: int,
+        R: list[int],
+        A: list[int],
+        **kwargs,
+    ):
+        saliency_map = torch.zeros(1, self.size[1], self.size[2])
+        for r in R:
+            for a in A:
+                if r == 0 and a != 0:
+                    continue
+                else:
+                    roll_row = -int(r * np.sin(a))
+                    roll_column = int(r * np.cos(a))
+
+                    saliency_map += self.explain(
+                        x.clone(),
+                        label=label,
+                        s=s,
+                        roll_row=roll_row,
+                        roll_column=roll_column,
+                        **kwargs,
+                    )
+        saliency_map /= ((len(R) - 1) * len(A)) + 1
+        saliency_map.squeeze_()
+        return saliency_map
