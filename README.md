@@ -10,12 +10,18 @@ h-Shap provides a fast, hierarchical implementation of Shapley coefficients for 
 
 ## Installation
 
-h-Shap is implemented in Python and it can be installed by cloning this repository.
+h-Shap can be installed via `pip` from [PyPI](https://pypi.org/project/h-shap/)
+
+```python
+python -m pip install h-shap
+```
+
+or directly from this repository
 
 ```python
 git clone https://github.com/Sulam-Group/h-shap.git
 cd h-shap
-pip install -e .
+python -m pip install -e .
 ```
 
 ## Usage
