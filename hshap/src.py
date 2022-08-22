@@ -16,7 +16,6 @@ class Explainer:
         self,
         model: Callable[[Tensor], Tensor],
         background: Tensor,
-        min_size: int,
     ) -> None:
         self.model = model
         self.background = background
@@ -25,9 +24,6 @@ class Explainer:
             self.background.size(1),
             self.background.size(2),
         )
-        self.stop_l = (
-            np.log(min((self.size[1], self.size[2])) / min_size) // np.log(2)
-        ) + 2
         self.gamma = 4
         self.features = hshap_features(self.gamma)
         self.W = shapley_matrix(self.gamma, device=background.device)
@@ -85,11 +81,14 @@ class Explainer:
         self,
         x: Tensor,
         label: int,
+        s: int,
         threshold_mode: str = "absolute",
         threshold: float = 0.0,
         softmax_activation: bool = True,
         batch_size: int = 2,
         binary_map: bool = False,
+        roll_row: int = 0,
+        roll_column: int = 0,
         **kwargs,
     ) -> Tensor:
         nodes = np.ones((1, 1, 4), dtype=np.bool_)
@@ -97,14 +96,21 @@ class Explainer:
         root_coords = np.array(
             [[[0, 0], [self.size[1], self.size[2]]]], dtype=np.uint16
         )
+
+        if roll_row != 0 or roll_column != 0:
+            x = torch.roll(x, shifts=(-roll_row, -roll_column), dims=(1, 2))
         root_inputs = x.unsqueeze_(0)
-        while nodes.shape[1] < self.stop_l:
+
+        stop_l = int(np.log2(min(self.size[1], self.size[2]) / s)) + 2
+        while nodes.shape[1] < stop_l:
             scores = scores.unsqueeze_(1).repeat((1, self.gamma))
+
             for batch_start_id in range(0, len(nodes), batch_size):
                 batch = nodes[batch_start_id : batch_start_id + batch_size]
                 batch_input = torch.empty_like(self.background).repeat(
-                    len(batch), 2 ** self.gamma, 1, 1, 1
+                    len(batch), 2**self.gamma, 1, 1, 1
                 )
+
                 for n, node in enumerate(batch):
                     batch_input[n] = self.masked_input_(
                         node[-1],
@@ -112,19 +118,26 @@ class Explainer:
                         root_coords[batch_start_id + n],
                     )
 
+                    if roll_row != 0 or roll_column != 0:
+                        batch_input[n] = torch.roll(
+                            batch_input[n], shifts=(roll_row, roll_column), dims=(2, 3)
+                        )
+
                 F = self.model(
                     batch_input.view(
-                        len(batch) * 2 ** self.gamma,
+                        len(batch) * 2**self.gamma,
                         self.size[0],
                         self.size[1],
                         self.size[2],
                     ),
                     **kwargs,
                 )
+
                 if softmax_activation:
                     F = torch.nn.functional.softmax(F, dim=1)
+
                 F = F[:, label]
-                F = F.view((-1, 1, 2 ** self.gamma))
+                F = F.view((-1, 1, 2**self.gamma))
                 scores[batch_start_id : batch_start_id + batch_size].mul_(
                     torch.matmul(F, self.W).squeeze_(1)
                 )
@@ -140,8 +153,10 @@ class Explainer:
 
             i, j = masked_scores.nonzero(as_tuple=True)
             del masked_scores
+
             _i, _j = i.size(0), j.size(0)
             ic, jc = i.cpu(), j.cpu()
+
             if _i == 0 and _j == 0:
                 raise ValueError("Could not find any important nodes.")
             if _i == 1 and _j == 1:
@@ -154,16 +169,23 @@ class Explainer:
                     (nodes[ic], self.features[jc]), axis=1, dtype=np.bool_
                 )
                 root_coords = root_coords[ic]
+
             scores = scores[i, j]
             root_inputs = root_inputs[i]
 
         saliency_map = torch.zeros(1, self.size[1], self.size[2])
         _scores = scores.tolist()
+
         for n, s, c in zip(nodes, _scores, root_coords):
             mask_map_(
                 map=saliency_map,
                 path=n[-1],
                 score=s if not binary_map else 1,
                 root_coords=c,
+            )
+
+        if roll_row != 0 or roll_column != 0:
+            saliency_map = torch.roll(
+                saliency_map, shifts=(roll_row, roll_column), dims=(1, 2)
             )
         return saliency_map
