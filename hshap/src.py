@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch import Tensor
-from typing import Callable
+from typing import Callable, List
 from .utils import (
     hshap_features,
     shapley_matrix,
@@ -195,8 +195,8 @@ class Explainer:
         x: Tensor,
         label: int,
         s: int,
-        R: list[int],
-        A: list[int],
+        R: List[int],
+        A: List[int],
         **kwargs,
     ):
         saliency_map = torch.zeros(1, self.size[1], self.size[2])
