@@ -10,7 +10,8 @@ def rsnahemorrhagenet(pretrained=False, **kwargs):
     if pretrained:
         dirname = os.path.dirname(__file__)
         state_dict = torch.load(
-            os.path.join(dirname, "demo", "RSNA_ICH_detection", "model.pt")
+            os.path.join(dirname, "demo", "RSNA_ICH_detection", "model.pt"),
+            map_device="cpu",
         )
         model.load_state_dict(state_dict)
     return model
