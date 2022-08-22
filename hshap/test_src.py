@@ -113,3 +113,22 @@ def test_explainer():
             roll_column=1,
         ),
     ).all()
+
+    expected_saliency_map = torch.zeros(1, 64, 64)
+    expected_saliency_map[:, 1, 1] = 1
+    expected_saliency_map[:, 2, 2] = 1
+    assert torch.eq(
+        expected_saliency_map,
+        hexp.cycle_explain(
+            x=x[1],
+            label=1,
+            s=1,
+            R=[0, 1],
+            A=[0, np.pi / 2, np.pi, 3 * np.pi / 2],
+            threshold_mode="absolute",
+            threshold=0.0,
+            softmax_activation=False,
+            batch_size=2,
+            binary_map=True,
+        ),
+    ).all()
