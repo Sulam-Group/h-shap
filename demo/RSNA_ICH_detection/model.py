@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+from torchvision import models
 
 
 class RSNAHemorrhageNet(nn.Module):
@@ -10,7 +10,7 @@ class RSNAHemorrhageNet(nn.Module):
         self.classifier = self.__classifier__()
 
     def __encoder__(self):
-        encoder = torch.hub.load("pytorch/vision:v0.9.0", "resnet18", pretrained=True)
+        encoder = models.resnet18(weights="ResNet18_Weights.DEFAULT")
         num_features = encoder.fc.in_features
         encoder.fc = nn.Linear(num_features, self.n_dim)
         nn.init.kaiming_normal_(encoder.fc.weight)
