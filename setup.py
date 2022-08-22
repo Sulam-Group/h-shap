@@ -17,7 +17,7 @@ setup(
     author_email=AUTHOR_EMAIL,
     license="MIT",
     packages=find_packages(),
-    install_requires=["numpy==", "torch"],
+    install_requires=["numpy", "torch"],
     classifiers=[
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
