@@ -217,5 +217,5 @@ class Explainer:
                         **kwargs,
                     )
         saliency_map /= ((len(R) - 1) * len(A)) + 1
-        saliency_map.squeeze_()
+        saliency_map
         return saliency_map
