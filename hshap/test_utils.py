@@ -56,7 +56,7 @@ def test_shapley_matrix():
     gamma = 4
     assert shapley_matrix(gamma, device).device == device
 
-    assert shapley_matrix(gamma, device).size() == (2 ** gamma, gamma)
+    assert shapley_matrix(gamma, device).size() == (2**gamma, gamma)
 
     expected_first_column = torch.tensor(
         [
